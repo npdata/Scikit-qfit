@@ -1,9 +1,15 @@
-import numpy as np
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # References:
 #
-# Gregory W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
+# G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
 #
+
+
+from __future__ import print_function, absolute_import, division
+
+import numpy as np
 
 class AsymJacobiP(object):
     """

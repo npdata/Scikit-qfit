@@ -1,3 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+
+# Reference documents
+#
+# [1] G W Forbes, "Fitting freeform shapes with orthogonal bases", Opt. Express 21, 19061-19081 (2013)
+# [2] G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
+# [3] G W Forbes, "Robust, efficient computational methods for axially symmetric optical aspheres",
+#           Opt. Express 18(19), 19700-19712 (2010)
+
+
+from __future__ import print_function, absolute_import, division
+
 import math
 import numpy as np
 
@@ -6,13 +20,6 @@ from scipy.misc import factorial, factorial2
 from scipy import ndimage
 
 from skqfit.asmjacp import AsymJacobiP
-
-# Reference documents
-#
-# 1. Fitting freeform shapes with orthogonal bases
-# 2. Characterizing the shape of freeform optics
-# 3. Robust, efficient computational methods for axially symmetric optical aspheres
-
 
 class QSpectrum(object):
     def __init__(self, m_max=None, n_max=None):
@@ -559,7 +566,7 @@ class QSpectrum(object):
                     The azimuthal and radial spectrum order. If None it uses the previous values
                     and if not defined it matches the values to the pixel resolution.
         Returns:
-            c:   2D array
+            2D array
                     The (m,n) matrix representation of the spectrum (sqrt(cos^2 + sin^2)) terms
         """
         a_mn, b_mn = self.q_fit(m_max, n_max)
@@ -567,3 +574,33 @@ class QSpectrum(object):
         return q_spec
 
 
+def qspec(x, y, zmap, m_max=None, n_max=None, centre=None, radius=None, shrink_pixels=7):
+    """
+    Fits the departure from a best fit sphere to the Q-polynominals as defined in [1](1.1)
+
+    Parameters:
+        x, y:   array_like
+                The interpolator uses grid points defined by the coordinate arrays x, y.
+                The arrays must be sorted to increasing order.
+        zmap:   array_like
+                2-D array of data with shape (x.size,y.size)
+        m_max, n_max:  int
+                The azimuthal and radial spectrum order. If None, it uses the previous values
+                and if not defined it matches the values to the pixel resolution.
+        centre: (cx, cy)
+                The centre of the part in axis coordinates. If None the centre is estimated
+                by a centre of mass calculation
+        radius: float
+                Defines the circular domain from the centre. If None it determines the
+                maximum radius from the centre that contains no invalids (NAN).
+        shrink_pixels: int
+                The estimated radius is reduced by 7 pixels to avoid edge effects with the
+                spline interpolation. Ignored if the radius is specified.
+
+        Returns:
+            2D array
+                The (m,n) matrix representation of the spectrum (sqrt(cos^2 + sin^2)) terms
+    """
+    qfit = QSpectrum(m_max=m_max, n_max=n_max)
+    qfit.data_map(x=x, y=y, zmap=zmap, centre=centre, radius=radius, shrink_pixels=shrink_pixels)
+    return qfit.build_q_spectrum()

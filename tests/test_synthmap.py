@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 """
 Test the Q spectrum processing using a synthesised image as specified
 in Section 5 of the "Fitting freeform shapes with orthogonal bases" document.
 """
+
 from __future__ import print_function, absolute_import, division
 
 import os
