@@ -13,6 +13,13 @@ import os
 import inspect
 from sphinx import apidoc
 
+import mock
+
+MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'numpy.polynomial.polynomial', 'scipy.misc.factorial',
+                'scipy.misc.factorial2', 'scipy.misc.ndimage', 'matplotlib.pyplot', 'scipy.interpolate']
+for mod_name in MOCK_MODULES:
+sys.modules[mod_name] = mock.Mock()
+
 
 __location__ = os.path.join(os.getcwd(), os.path.dirname(
     inspect.getfile(inspect.currentframe())))
@@ -226,12 +233,6 @@ latex_documents = [
 # latex_domain_indices = True
 
 # -- External mapping ------------------------------------------------------------
-import sys
-import mock
-
-MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'matplotlib.pyplot', 'scipy.interpolate']
-for mod_name in MOCK_MODULES:
-sys.modules[mod_name] = mock.Mock()
 
 python_version = '.'.join(map(str, sys.version_info[0:2]))
 intersphinx_mapping = {
