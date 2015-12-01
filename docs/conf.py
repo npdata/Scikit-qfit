@@ -226,6 +226,13 @@ latex_documents = [
 # latex_domain_indices = True
 
 # -- External mapping ------------------------------------------------------------
+import sys
+import mock
+
+MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'matplotlib.pyplot', 'scipy.interpolate']
+for mod_name in MOCK_MODULES:
+sys.modules[mod_name] = mock.Mock()
+
 python_version = '.'.join(map(str, sys.version_info[0:2]))
 intersphinx_mapping = {
     'sphinx': ('http://sphinx.pocoo.org', None),

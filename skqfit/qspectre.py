@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-
 # Reference documents
 #
 # [1] G W Forbes, "Fitting freeform shapes with orthogonal bases", Opt. Express 21, 19061-19081 (2013)
