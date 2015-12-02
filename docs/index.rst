@@ -34,12 +34,12 @@ Contents
    License <license>
    Authors <authors>
    Changelog <changes>
-   Module Reference <api/modules>
+
+..      Module Reference <api/modules>
 
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`

@@ -3,26 +3,37 @@ Scikit-Qfit
 ===========
 
 
-Scikit-Qfit is a Python that supports fitting gradient orthogonal Q-polynomials to 2D data.
-Specifically it implements the algorithm defined in the "Fitting freeform shapes with orthogonal
-bases", G W Forbes.
+Scikit-Qfit is a package that supports fitting gradient orthogonal Q-polynomials to 2D data.
 
 
 Description
 ===========
 
-Gradient orthogonal Q-polynomials to represent rotational optical surfaces have been used for
-several years now by designers and has shown to have superior performance to a the standard monomial
-representation because it requires less terms to adequately define the surface and offers
-quicker convergence in design optimization.
+Gradient orthogonal Q-polynomial representation of rotational optical surfaces have been used for
+several years now by designers and have shown superior performance to the standard monomial form
+because they require less terms to adequately define the surface and offer quicker convergence in design optimization.
+Q-polynomials were first introduced with the publication of:
 
- * G. W. Forbes, "Shape specification for axially symmetric optical surfaces", Opt. Express 15, 5218-5226 (2007)
+ * G W Forbes, "Shape specification for axially symmetric optical surfaces", Opt. Express 15, 5218-5226 (2007)
 
-The idea was extended by the original author to freeform shapes through the following articles:
+The use Q-polynomials was extended by the original author to address freeform shapes through the following articles:
 
  * "Fitting freeform shapes with orthogonal bases", Opt. Express 21, 19061-19081 (2013)
  * "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
  * "Robust, efficient computational methods for axially symmetric optical aspheres", Opt. Express 18(19), 19700-19712 (2010)
+
+The implementation of this package follows the description in "Fitting freeform shapes with orthogonal
+bases".
+
+Additional project documentation can be found at
+`<http://scikit-qfit.readthedocs.org/>`_.
+
+Installation
+============
+
+The package can be installed through pip:
+
+  > pip install scikit-qfit
 
 Usage
 =====
@@ -37,13 +48,15 @@ limits are set by m_max and n_max respectively.
 
 Limitations
 ===========
-A double float representation limits the Jacobian polynomial calculation to a maximum of 1500 for the radially and
-azimuthal terms (n, m). Using values greater than this can lead to an overflow.
 
-The algorithm is an N^2 process, so doubling the number of radial and azimuthal terms takes four times as long.
+The Jacobian polynomial calculation required by the algorithm can generate very large numbers which limits spectral resolution
+to a maximum of 1500 for the radial and azimuthal terms (n, m). Using values greater than this can lead to an overflow.
+If the nominal spectral resolution for a datamap is greater than this limit the data should be filtered prior to processing
+to avoid aliasing.
 
-The combination of the above two limitations may stop the spectral and pixel resolution matching. In this case the data
-should be filtered to avoid aliasing.
+
+Note that the process is an N^2 algorithm, so doubling the number of radial and azimuthal terms takes four times as long.
+
 
 Dependencies
 ============
@@ -54,7 +67,7 @@ The package requires numpy and scipy and was tested on Linux with:
  * scipy 0.13.3
 
 These python, numpy and scipy versions were available on the Ubuntu 14.04 Linux release at the time of testing.
-The package has been informally tested with python 3.4 successfully and am not aware of reason it should not with
+The package has been informally tested with python 3.4 successfully and I am not aware of reason it should not work with
 later releases of these packages.
 
 Note

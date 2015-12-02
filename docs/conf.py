@@ -15,8 +15,9 @@ from sphinx import apidoc
 
 import mock
 
-MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'numpy.polynomial.polynomial', 'scipy.misc.factorial',
-                'scipy.misc.factorial2', 'scipy.misc.ndimage', 'matplotlib.pyplot', 'scipy.interpolate']
+MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'numpy.polynomial.polynomial', 'scip.misc',
+                'scipy.misc.factorial', 'scipy.misc.factorial2', 'scipy.misc.ndimage',
+                'matplotlib.pyplot', 'scipy.interpolate']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
