@@ -62,6 +62,7 @@ Dependencies
 ============
 
 The package requires numpy and scipy and was tested on Linux with:
+
  * Python 2.7.6
  * numpy 1.8.2
  * scipy 0.13.3
