@@ -224,7 +224,7 @@ class QSpectrum(object):
         if self.polar_sag_fn is None:
             rv = rho*np.cos(theta) + self.centre[0]
             cv = rho*np.sin(theta) + self.centre[1]
-            return np.array(self.interpolate(rv, cv, grid=False)) - self.centre_sag
+            return np.array(self.interpolate.ev(rv, cv)) - self.centre_sag
         else:
             return self.polar_sag_fn(rho, theta) - self.centre_sag
 

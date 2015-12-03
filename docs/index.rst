@@ -3,7 +3,7 @@ Scikit-Qfit
 ===========
 
 .. note::
-   Work in progress
+   Work in progress - automodule issue with reathedocs
    
 A gradient-orthogonal Q-polynomial representation of axially symmetric optical surfaces has been used for several
 years by designers.  It improves upon the standard polynomial form by being simpler to interpret, using fewer

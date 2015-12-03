@@ -5,4 +5,4 @@ Modules
    :maxdepth: 4
 
    skqfit
-   versioneer
+

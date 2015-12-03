@@ -25,11 +25,11 @@ def load_mahr_file(filename):
     with open(filename,'r') as file:
         fpm={}
         line = file.readline()
-        if line != "[PROFILE_HEADER]\n":
+        if line.strip() != "[PROFILE_HEADER]":
             raise Exception("Invalid File Format")
 
         # get the file parameters first
-        while line != "[PROFILE_VALUES]\n":
+        while line.strip() != "[PROFILE_VALUES]":
             spl = line.split("=")
             if spl[0] in need:
                 if len(spl) < 2:

@@ -2,6 +2,10 @@
 Changelog
 =========
 
+Version 0.1.2
+=============
+- Fixed error in interpolator call
+- Added documentation to readthedocs
 
 Version 0.1.1
 =============
