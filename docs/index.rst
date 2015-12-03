@@ -71,9 +71,9 @@ following::
    pip install scikit-qfit
 
 
-Obtaining the Latest Software
------------------------------
-The software can be downloaded from `GitHub <https://github.com/npdata/scikit-qfit>`_
+Latest Software
+---------------
+The latest software can be downloaded from `GitHub <https://github.com/npdata/scikit-qfit>`_
 
 Online documentation is available at `<https://scikit-qfit.readthedocs.org>`_
 
@@ -104,4 +104,5 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
+* :ref:`modindex`
 * :ref:`search`

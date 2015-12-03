@@ -21,7 +21,7 @@ MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'numpy.polynomial.polynomial', '
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
-autodoc_mock_imports = MOCK_MODULES + ['factorial', 'factorial2']
+autodoc_mock_imports = MOCK_MODULES
 
 __location__ = os.path.join(os.getcwd(), os.path.dirname(
     inspect.getfile(inspect.currentframe())))
@@ -34,10 +34,7 @@ namespace_pkg = ".".join([namespace[-1], package]) if namespace else package
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 # sys.path.insert(0, os.path.abspath('.'))
-sys.path.append(os.path.abspath('/api'))
 sys.path.append(os.path.abspath('../skqfit'))
-sys.path.append(os.path.abspath('../tests'))
-sys.path.append(os.path.abspath('../example'))
 sys.path.append(os.path.abspath('../../'))
 
 # -- General configuration -----------------------------------------------------
