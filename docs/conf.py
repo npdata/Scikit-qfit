@@ -37,7 +37,7 @@ namespace_pkg = ".".join([namespace[-1], package]) if namespace else package
 sys.path.append(os.path.abspath('/api'))
 sys.path.append(os.path.abspath('../tests'))
 sys.path.append(os.path.abspath('../example'))
-
+sys.path.append(os.path.abspath('../../'))
 
 # -- General configuration -----------------------------------------------------
 
