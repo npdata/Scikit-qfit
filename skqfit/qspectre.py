@@ -1,10 +1,11 @@
-# Reference documents
-#
-# [1] G W Forbes, "Fitting freeform shapes with orthogonal bases", Opt. Express 21, 19061-19081 (2013)
-# [2] G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
-# [3] G W Forbes, "Robust, efficient computational methods for axially symmetric optical aspheres",
-#           Opt. Express 18(19), 19700-19712 (2010)
+"""
+ Reference documents
 
+ [1] G W Forbes, "Fitting freeform shapes with orthogonal bases", Opt. Express 21, 19061-19081 (2013)
+ [2] G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
+ [3] G W Forbes, "Robust, efficient computational methods for axially symmetric optical aspheres",
+           Opt. Express 18(19), 19700-19712 (2010)
+"""
 
 from __future__ import print_function, absolute_import, division
 
@@ -423,8 +424,9 @@ class QSpectrum(object):
         """
         A vectorized polar sag function that takes rho and theta as arguments.
 
-        What should the pixel_radius be set to? The data isn't pixelated 
-        so set it to a high value, say 1e6
+        This function is used to pass an analytic sag function to test the performance
+        of the algorithm to a higher precision.
+
         """
         self.polar_sag_fn = sag_fn
         self.radius = radius

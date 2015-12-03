@@ -5,9 +5,9 @@ Scikit-Qfit
 .. note::
    Work in progress
    
-Gradient orthogonal Q-polynomial representation of rotational optical surfaces have been used for
-several years now by designers and have shown superior performance to the standard polynomial form
-because they require less terms to adequately define the surface and offer quicker convergence in design optimization.
+A gradient-orthogonal Q-polynomial representation of axially symmetric optical surfaces has been used for several
+years by designers.  It improves upon the standard polynomial form by being simpler to interpret, using fewer
+terms to adequately define a surface, and sometimes even offering quicker convergence in design optimization.
 Q-polynomials were first introduced with the publication of:
 
  * G W Forbes,  `Shape specification for axially symmetric optical surfaces <https://www.osapublishing.org/oe/abstract.cfm?uri=oe-15-8-5218>`_, Opt. Express 15, 5218-5226 (2007)
@@ -24,24 +24,66 @@ bases".
 Q-spectrum examples
 ===================
 
-The references above detail the characteristics of the
-The following images were generated from data supplied by `Mahr GmbH <http://www.mahr.com/>`_.
+The Q-spectrum offers a natural way to quantify and investigate surface structure on parts with circular apertures.
+For example, spoke structure on the surface appears in specific columns of the spectrum whereas raster patterns appear
+as diagonal bands with a slope of one half.  Rotationally symmetric structure, such a rings etc., are all contained in
+the m=0 column.  The spectrum is computed with an FFT-like step that suffers similarly from aliasing unless a
+sufficiently large range of frequencies is computed.
+
 
 .. image:: ./images/ring_src_qspec.PNG
    :width: 500px
    :align: center
 
-The first of these
 
 .. image:: ./images/radial_src_qspec.PNG
    :width: 500px
    :align: center
 
-Example code
+The above images were generated from data supplied by `Mahr GmbH <http://www.mahr.com/>`_.
+
+Code structure
+==============
+
+The package only contains two modules. The Jacobi module provides support for normalised Jacobi
+polynomials that extend the range of usable parameters before an overflow condition is encountered.
+Even though the Q-fitting algorithm is procedural the implementation is via a Q-spectrum class as it allowed
+the spectrum to be iterated with different parameters without having to reload the data.
+The algorithm implementation refers to the relevant section of the reference documents.
+
+.. toctree::
+   :maxdepth: 2
+
+   Jacobi polynomials <api/skqfit.asmjacp>
+   Q-spectrum <api/skqfit.qspectre>
+
+
+Installation
 ============
 
-.. module:: skqfit.asmjacp
-   :synopsis:  sample code that loads, process and displays a data file
+Quick Installation
+------------------
+If you have `pip <http://pypi.python.org/pypi/pip>`_ installed, you should be
+able to install the latest stable release of ``scikit-qfit`` by running the
+following::
+
+   pip install scikit-qfit
+
+
+Obtaining the Latest Software
+-----------------------------
+The software can be downloaded from `GitHub <https://github.com/npdata/scikit-qfit>`_
+
+Online documentation is available at `<https://scikit-qfit.readthedocs.org>`_
+
+Installation Dependencies
+-------------------------
+``scikit-qfit`` requires that the following software packages be
+installed:
+
+* `Python <http://www.python.org>`_ 2.7.6 or later.
+* `NumPy <http://www.numpy.org>`_ 1.8.2 or later.
+* `SciPy <http://www.scipy.org>`_ 0.13.3 or later.
 
 
 Contents

@@ -1,7 +1,9 @@
-# References:
-#
-# G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
-#
+"""
+ References:
+
+ G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
+
+"""
 
 
 from __future__ import print_function, absolute_import, division
