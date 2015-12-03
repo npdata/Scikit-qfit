@@ -74,6 +74,14 @@ def load_mahr_file(filename):
     return zmap, x, y
 
 def disp_qspec(qmap, skip_rotnl=False, skip_interp=True, skip_low_order=False):
+    """
+    Display the Q-spectrum as a simple 2D map
+    :param qmap:
+    :param skip_rotnl:
+    :param skip_interp:
+    :param skip_low_order:
+    :return:
+    """
     fig, ax = plt.subplots()
     interp = 'none' if skip_interp else None      
     ax.xaxis.tick_top()

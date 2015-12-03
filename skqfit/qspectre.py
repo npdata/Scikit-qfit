@@ -344,7 +344,7 @@ class QSpectrum(object):
         sag_rim = np.sum(self._sag_polar(rho, theta))/points
         self.bfs_curv = 2.0*sag_rim/(sag_rim**2 + self.radius**2)
 
-    def alt2_valid_radius(self, mask):
+    def _valid_radius(self, mask):
         cpix = self.centre_pixel
         rows = mask.shape[0]
         cols = mask.shape[1]
@@ -356,89 +356,6 @@ class QSpectrum(object):
         r_max = math.sqrt(np.min(rsq[mask == 0]))
 
         # Check that radius is contained inside the mask boundary
-        r_max = min(r_max, cpix[0])
-        r_max = min(r_max, rows - 1 - cpix[0])
-        r_max = min(r_max, cpix[1])
-        r_max = min(r_max, cols - 1 - cpix[1])
-
-        return r_max
-
-    def alt_valid_radius(self, mask):
-        cpix = self.centre_pixel
-        rows = mask.shape[0]
-        cols = mask.shape[1]
-        rad_sqr = rows**2
-        r_0 = int(np.round(cpix[0]))
-        c_0 = int(np.round(cpix[1]))
-
-        def scan_cols(rsqr, r, rng, mm):
-            for c in rng:
-                if mm[r, c] != 0:
-                    continue
-                return c
-            return None
-
-        def col_limits(rsqr, r, cix, cols):
-            cdel = math.sqrt(rsqr - (r-cix[0])**2)
-            cmax = min(cols, math.ceil(cix[1] + cdel))
-            cmin = max(0, math.floor(cix[1] - cdel))
-            return cmin, cmax
-
-        def update_max(rsqr, r, c, cix):
-            t2 = (r - cix[0])**2 + (c - cix[1])**2
-            return t2 if t2 < rad_sqr else rad_sqr
-
-        for r in range(r_0, rows):
-            r2 = (r - cpix[0])**2
-            if r2 >= rad_sqr:
-                continue
-            cmin, cmax = col_limits(rad_sqr, r, cpix, cols)
-            c = scan_cols(rad_sqr, r, range(c_0, cmax), mask)
-            rad_sqr = rad_sqr if c is None else update_max(rad_sqr, r, c, cpix)
-            c = scan_cols(rad_sqr, r, range(c_0-1, cmin-1, -1), mask)
-            rad_sqr = rad_sqr if c is None else update_max(rad_sqr, r, c, cpix)
-
-        for r in range(r_0, -1, -1):
-            r2 = (r - cpix[0])**2
-            if r2 >= rad_sqr:
-                continue
-            cmin, cmax = col_limits(rad_sqr, r, cpix, cols)
-            c = scan_cols(rad_sqr, r, range(c_0, cmax), mask)
-            rad_sqr = rad_sqr if c is None else update_max(rad_sqr, r, c, cpix)
-            c = scan_cols(rad_sqr, r, range(c_0-1, cmin-1, -1), mask)
-            rad_sqr = rad_sqr if c is None else update_max(rad_sqr, r, c, cpix)
-
-        # Check that radius is contained inside the mask boundary
-        r_max = math.sqrt(rad_sqr)
-        r_max = min(r_max, cpix[0])
-        r_max = min(r_max, rows - 1 - cpix[0])
-        r_max = min(r_max, cpix[1])
-        r_max = min(r_max, cols - 1 - cpix[1])
-
-        return r_max
-
-    def _valid_radius(self, mask):
-        """
-        Returns the maximum radius in pixel units that contains all valid pixels
-        and is within the domain of the mask.
-        """
-        cpix = self.centre_pixel
-        rows = mask.shape[0]
-        cols = mask.shape[1]
-        rad_sqr = rows**2
-        r_cnt = cpix[0]
-        c_cnt = cpix[1]
-        for r in range(rows):
-            r2 = (r - r_cnt)**2
-            for c in range(cols):
-                if mask[r, c] != 0:
-                    continue
-                c2 = (c - c_cnt)**2
-                t2 = r2 + c2
-                rad_sqr = t2 if t2 < rad_sqr else rad_sqr
-
-        # Check that radius is contained inside the mask boundary
-        r_max = math.sqrt(rad_sqr)
         r_max = min(r_max, cpix[0])
         r_max = min(r_max, rows - 1 - cpix[0])
         r_max = min(r_max, cpix[1])
@@ -490,7 +407,7 @@ class QSpectrum(object):
         if radius is None:
             mask = np.zeros_like(zmap, dtype=np.int)
             np.isfinite(zmap, out=mask)
-            self.pixel_radius = self.alt2_valid_radius(mask) - shrink_pixels
+            self.pixel_radius = self._valid_radius(mask) - shrink_pixels
             self.radius = (self.pixel_radius)*pixel_spacing
         else:
             self.radius = radius

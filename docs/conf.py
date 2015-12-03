@@ -15,12 +15,13 @@ from sphinx import apidoc
 
 import mock
 
-MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'numpy.polynomial.polynomial', 'scip.misc',
-                'scipy.misc.factorial', 'scipy.misc.factorial2', 'scipy.misc.ndimage',
-                'matplotlib.pyplot', 'scipy.interpolate']
+MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'numpy.polynomial.polynomial', 'scipy.misc',
+                'scipy.ndimage', 'matplotlib.pyplot', 'scipy.interpolate',
+                'mpl_toolkits.axes_grid1','numpy.polynomial', 'numpy.polynomial.polynomial']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
+autodoc_mock_imports = MOCK_MODULES + ['factorial', 'factorial2']
 
 __location__ = os.path.join(os.getcwd(), os.path.dirname(
     inspect.getfile(inspect.currentframe())))
@@ -33,6 +34,10 @@ namespace_pkg = ".".join([namespace[-1], package]) if namespace else package
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 # sys.path.insert(0, os.path.abspath('.'))
+sys.path.append(os.path.abspath('../skqfit'))
+sys.path.append(os.path.abspath('../tests'))
+sys.path.append(os.path.abspath('../example'))
+
 
 # -- General configuration -----------------------------------------------------
 
@@ -112,7 +117,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'alabaster'
+# html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

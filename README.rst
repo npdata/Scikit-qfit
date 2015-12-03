@@ -9,23 +9,11 @@ Scikit-Qfit is a package that supports fitting gradient orthogonal Q-polynomials
 Description
 ===========
 
-Gradient orthogonal Q-polynomial representation of rotational optical surfaces have been used for
-several years now by designers and have shown superior performance to the standard monomial form
-because they require less terms to adequately define the surface and offer quicker convergence in design optimization.
-Q-polynomials were first introduced with the publication of:
+This package implements the algorithm described in:
 
- * G W Forbes, "Shape specification for axially symmetric optical surfaces", Opt. Express 15, 5218-5226 (2007)
+* G W Fobes, `Fitting freeform shapes with orthogonal bases <https://www.osapublishing.org/oe/abstract.cfm?uri=oe-21-16-19061>`_, Opt. Express 21, 19061-19081 (2013)
 
-The use Q-polynomials was extended by the original author to address freeform shapes through the following articles:
-
- * "Fitting freeform shapes with orthogonal bases", Opt. Express 21, 19061-19081 (2013)
- * "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
- * "Robust, efficient computational methods for axially symmetric optical aspheres", Opt. Express 18(19), 19700-19712 (2010)
-
-The implementation of this package follows the description in "Fitting freeform shapes with orthogonal
-bases".
-
-Additional project documentation can be found at
+Additional project documentation and references for Q-polynomials can be found at:
 `<http://scikit-qfit.readthedocs.org/>`_.
 
 Installation
@@ -70,6 +58,12 @@ The package requires numpy and scipy and was tested on Linux with:
 These python, numpy and scipy versions were available on the Ubuntu 14.04 Linux release at the time of testing.
 The package has been informally tested with python 3.4 successfully and I am not aware of reason it should not work with
 later releases of these packages.
+
+Acknowledge
+===========
+
+* Greg Forbes for support with the implementation and validation of the algorithm.
+* Andreas Beutler, Mahr GmbH, for choosing to make this work available as open source.
 
 Note
 ====
