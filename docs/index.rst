@@ -2,9 +2,6 @@
 Scikit-Qfit
 ===========
 
-.. note::
-   Work in progress - automodule issue with reathedocs
-   
 A gradient-orthogonal Q-polynomial representation of axially symmetric optical surfaces has been used for several
 years by designers.  It improves upon the standard polynomial form by being simpler to interpret, using fewer
 terms to adequately define a surface, and sometimes even offering quicker convergence in design optimization.
@@ -55,8 +52,8 @@ The algorithm implementation refers to the relevant section of the reference doc
 .. toctree::
    :maxdepth: 2
 
-   Jacobi polynomials <api/skqfit.asmjacp>
-   Q-spectrum <api/skqfit.qspectre>
+   Jacobi polynomials <skqfit.asmjacp>
+   Q-spectrum <skqfit.qspectre>
 
 
 Installation
@@ -75,11 +72,9 @@ Latest Software
 ---------------
 The latest software can be downloaded from `GitHub <https://github.com/npdata/scikit-qfit>`_
 
-Online documentation is available at `<https://scikit-qfit.readthedocs.org>`_
-
 Installation Dependencies
 -------------------------
-``scikit-qfit`` requires that the following software packages be
+``scikit-qfit`` requires that the following software packages to be
 installed:
 
 * `Python <http://www.python.org>`_ 2.7.6 or later.
@@ -93,7 +88,7 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   Module Reference <api/modules>
+   Module Reference <modules>
    License <license>
    Authors <authors>
    Changelog <changes>

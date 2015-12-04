@@ -36,8 +36,6 @@ build/*
 dist/*
 sdist/*
 docs/api/*
-!docs/api/modules.rst
-!docs/api/skqfit*.rst
 docs/_build/*
 cover/*
 MANIFEST

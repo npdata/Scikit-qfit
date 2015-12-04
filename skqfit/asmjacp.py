@@ -1,7 +1,7 @@
 """
- References:
+References:
 
- G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
+G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
 
 """
 
@@ -16,11 +16,14 @@ class AsymJacobiP(object):
     defined in the reference document [A.1]
 
     
-    *** Warning
+    Warning
+    -------
     The Jacobi P polynominals can generate large values that lead to a 
-    double overflow for large m and n values. It is tested to (1500, 1500) for (m,n)
+    double overflow for large m and n values. It is tested to (1500, 1500) for (m,n).
+    Exceeding these values may lead to overflow events.
 
-    *** Note
+    Note
+    ----
     The scipi.special.jacobi function is has a 1.5:1 performance advantage over the
     current implementation but it doesn't support the normalization and can lead 
     to an overflow condition for n or m over 500. 
@@ -102,7 +105,8 @@ class AsymJacobiP(object):
     def jmat_u_x(self, jmat, uv, xv):
         """
         Builds the asymmetric Jacobi P polynomial as defined in [2] A.1 for all of the
-        x values with the scaling factor of u**m which avoids the overflow condition. 
+        x values with the scaling factor of u**m which extends the range of usable (m,n)
+        values before an overflow condition occurs.
         """
         m = self.m
         if m == 1:
@@ -138,7 +142,7 @@ class AsymJacobiP(object):
     def jvec_u_x(self, jvec, u, x):
         """
         Builds the asymmetric Jacobi P polynomial for a single x as defined in [2] A.1 for all of the
-        x values with the scaling factor of u**m which avoids the overflow condition. 
+        x values with the scaling factor of u**m which extends the range of usable (m,n) values.
         """
         m = self.m
         if m == 1:

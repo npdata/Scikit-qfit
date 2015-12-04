@@ -1,10 +1,9 @@
 """
- Reference documents
+Reference documents
 
- [1] G W Forbes, "Fitting freeform shapes with orthogonal bases", Opt. Express 21, 19061-19081 (2013)
- [2] G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
- [3] G W Forbes, "Robust, efficient computational methods for axially symmetric optical aspheres",
-           Opt. Express 18(19), 19700-19712 (2010)
+[1] G W Forbes, "Fitting freeform shapes with orthogonal bases", Opt. Express 21, 19061-19081 (2013)
+[2] G W Forbes, "Characterizing the shape of freeform optics", Opt. Express 20(3), 2483-2499 (2012)
+[3] G W Forbes, "Robust, efficient computational methods for axially symmetric optical aspheres", Opt. Express 18(19), 19700-19712 (2010)
 """
 
 from __future__ import print_function, absolute_import, division
@@ -19,13 +18,20 @@ from scipy import ndimage
 from skqfit.asmjacp import AsymJacobiP
 
 class QSpectrum(object):
+    """
+    Performs precomputation if Q spectrum limits are passed, otherwise it is
+    delayed until the data is loaded.
+    The class supports processing a data map or a pointer to a sag function that
+    can be used for analytic testing.
+
+    Parameters:
+    m_max, n_max:  int
+        The azimuthal and radial spectrum order. Setting values above 1500 may lead to overflow
+        events.
+
+    """
+
     def __init__(self, m_max=None, n_max=None):
-        """
-        Performs precomputation if Q spectrum limits are passed, otherwise it is
-        delayed until the data is loaded.
-        The processing an interpolated data map or a pointer to a sag function that 
-        can be used for analytic testing.
-        """
         self.interpolate = None
         self.m_max = None
         self.n_max = None
@@ -366,7 +372,7 @@ class QSpectrum(object):
 
     def data_map(self, x, y, zmap, centre=None, radius=None, shrink_pixels=7):
         """
-        Creates the spline interpolator for the map, determines the best fits sphere
+        Creates the spline interpolator for the map, determines the best fit sphere
         and minimum valid radius.
 
         Parameters:
@@ -491,7 +497,8 @@ class QSpectrum(object):
 
 def qspec(x, y, zmap, m_max=None, n_max=None, centre=None, radius=None, shrink_pixels=7):
     """
-    Fits the departure from a best fit sphere to the Q-polynominals as defined in [1](1.1)
+    A wrapper function that creates the Q-spectrum object, loads and performs the
+    fit of the data to the Q polynomials.
 
     Parameters:
         x, y:   array_like
