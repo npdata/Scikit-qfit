@@ -360,7 +360,10 @@ class QSpectrum(object):
         yv = np.arange(cols, dtype=np.float) - cpix[1]
         m1 = np.ones((rows,cols), dtype=np.float)
         rsq = m1*(yv*yv) + np.transpose(m1.transpose()*(xv*xv))
-        r_max = math.sqrt(np.min(rsq[mask == 0]))
+        if len(mask[mask == 0]) == 0:
+            r_max = rows
+        else:
+            r_max = math.sqrt(np.min(rsq[mask == 0]))
 
         # Check that radius is contained inside the mask boundary
         r_max = min(r_max, cpix[0])

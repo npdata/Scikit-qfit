@@ -63,7 +63,7 @@ Acknowledge
 ===========
 
 * Greg Forbes for support with the implementation and validation of the algorithm.
-* Andreas Beutler, Mahr GmbH, for choosing to make this work available as open source.
+* Andreas Beutler, `Mahr GmbH <http://www.mahr.com/>`_, for choosing to make this work available as open source.
 
 Note
 ====

@@ -2,6 +2,10 @@
 Changelog
 =========
 
+Version 0.1.3
+=============
+- Fixed error when data has non invalids
+
 Version 0.1.2
 =============
 - Fixed error in interpolator call
