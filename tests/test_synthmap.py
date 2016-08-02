@@ -8,13 +8,26 @@ in Section 5 of the "Fitting freeform shapes with orthogonal bases" document.
 
 from __future__ import print_function, absolute_import, division
 
-import os
+import math
+import time
 import numpy as np
 from numpy.polynomial.polynomial import polyval2d
-
 from skqfit.qspectre import QSpectrum
+from matplotlib import pyplot as plt
 
-def test_synthmap(as_map=False):
+def display_map(map, centre=None, radius=None):
+    im = plt.imshow(map)
+    plt.colorbar(im, orientation='vertical')
+
+    if not centre is None and not radius is None:
+        t = np.linspace(0.0, 2*np.pi, 200)
+        x = radius * np.cos(t) + centre[1]
+        y = radius * np.sin(t) + centre[0]
+        plt.plot(x, y, 'r-')
+
+    plt.show()
+
+def test_synthmap(as_map=False, inverse=False):
     def sag_fn(rhov, thetav):
         x = rhov*np.cos(thetav)
         y = rhov*np.sin(thetav)
@@ -30,6 +43,7 @@ def test_synthmap(as_map=False):
         return z + polyval2d(x, y, sag_xy.coeff)
 
     sag_xy.rmax = 174.2
+    sag_xy.curv = -1/478.12597
     sag_xy.coeff = np.zeros((11,11), dtype=np.float)
     sag_xy.coeff[0,:]  = [0, 0, 8.446692E-05,	-1.773111E-08,	2.103339E-10,	-4.450410E-14,	1.204820E-15,	-3.751270E-18,	1.243271E-20,	-1.671689E-23,	2.740074E-26]
     sag_xy.coeff[2,:9] = [6.086975E-05,	-9.657166E-08,	3.881972E-10,	-5.340721E-13,	1.962740E-15,	-3.972902E-18,	2.276418E-20,	-6.515923E-23,	1.259617E-25]
@@ -38,17 +52,12 @@ def test_synthmap(as_map=False):
     sag_xy.coeff[8,:3] = [1.020537E-21,	-6.739667E-24,	-3.800397E-27]
     sag_xy.coeff[10,0] = 1.653756E-28
 
-    def build_map():
-        x = np.linspace(-1.02*sag_xy.rmax, 1.02*sag_xy.rmax, 200)
-        y = np.linspace(-1.02*sag_xy.rmax, 1.02*sag_xy.rmax, 200)
-
-        xv = np.repeat(x, y.size)
-        yv = np.repeat(y.reshape((1,y.size)), x.size, axis=0).flatten()
-
+    def build_map(pts):
+        x = np.linspace(-1.02*sag_xy.rmax, 1.02*sag_xy.rmax, pts)
+        y = np.linspace(-1.02*sag_xy.rmax, 1.02*sag_xy.rmax, pts)
+        xv, yv = np.meshgrid(x, y, indexing='ij')
         z = sag_xy(xv, yv)
-
         return x, y, z.reshape((x.size, y.size))
-
 
     exp_ispec = np.array([[70531,   225291, 25895,  199399, 3583,   2651,   1886,   339,    55, 41, 5],
                           [43,	    223995,	11377,	198,	2604,	801,	46,	    37,	    5,	0,	0],
@@ -57,23 +66,44 @@ def test_synthmap(as_map=False):
                           [1,	    20,	    3,	    1,	    0,	    0,	    0,	    0,	    0,	0,	0]], dtype=np.int)
 
 
-    bfs_c  = None
-    m_max = 10
-    n_max = 9
+    bfs_c  = sag_xy.curv
+    points = 500
+    if False:
+        m_max = 500
+        n_max = 200
+    else:
+        m_max = 10
+        n_max = 9
     qfit = QSpectrum(m_max, n_max)
 
     if as_map:
-        x, y, zmap = build_map()
-        qfit.data_map(x, y, zmap, centre=(0.,0.), radius=sag_xy.rmax)
+        x, y, zmap = build_map(points)
+        qfit.data_map(x, y, zmap, centre=(0.,0.), radius=sag_xy.rmax, bfs_curv=bfs_c)
     else:
         qfit.set_sag_fn(sag_fn, sag_xy.rmax, bfs_c)
-    qspec = qfit.build_q_spectrum()
+
+    a_nm, b_nm = qfit.q_fit(m_max, n_max)
+    qspec = np.sqrt(np.square(a_nm) + np.square(b_nm))
 
     ispec = np.round(1e6*qspec).astype(int)
-    idiff = ispec[:5,:] - exp_ispec
+    idiff = ispec[:5,:11] - exp_ispec
     errors = np.count_nonzero(idiff)
-    assert errors == 0
+    inv_err = 0.0
+    if inverse:
+        if not as_map:
+            x, y, zmap = build_map(points)
+        start = time.time()
+        zinv = qfit.build_map(x, y, bfs_c, radius=sag_xy.rmax, a_nm=a_nm, b_nm=b_nm, interpolated=True)
+        print('inverse done, time %.3fs' % (time.time() - start))
+        cond = zinv != 0.0
+        diff = np.extract(cond, zmap - zinv)
+        # z = np.zeros_like(zmap)
+        # np.place(z, cond, diff)
+        # display_map(z)
+        inv_err = max(math.fabs(np.max(diff)), math.fabs(np.min(diff)))
+
+    assert errors == 0 and inv_err < 1.0e-7
 
 if __name__ == "__main__":
-    test_synthmap(False)
-    test_synthmap(True)
+    test_synthmap(as_map=False, inverse=True)
+    test_synthmap(as_map=True, inverse=True)
