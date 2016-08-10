@@ -91,7 +91,6 @@ def disp_qspec(qmap, skip_rotnl=False, skip_interp=True, skip_low_order=False):
     if skip_low_order:
         srow = 1
     qm = qmap[srow:,scol:]
-    mean_sqr_grad = np.sum(qm)
     peak_val = np.log10(np.max(qm))
     log_max = peak_val + 0.1
     log_min = log_max - 4.001
@@ -102,8 +101,50 @@ def disp_qspec(qmap, skip_rotnl=False, skip_interp=True, skip_low_order=False):
     cax2 = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(im, orientation='vertical', cax=cax2)
     plt.show()
- 
-def process_file(fname, m_max=None, n_max=None, show_rotnl=False):
+
+def filter(fname, m_max=None, n_max=None):
+    zmap, x, y = load_mahr_file(fname)
+    qfit = qf.QSpectrum(m_max=m_max, n_max=n_max)
+    qfit.data_map(x=x, y=y, zmap=zmap)
+    a_nm, b_nm = qfit.q_fit(m_max, n_max)
+
+    # Apply suitable filter in q-space
+    # In this case just remove the low order azimuthal and radial
+
+    mask = np.ones_like(a_nm)
+    #for i in range(5,35):
+    #    mask[:,i] = 0.0
+    mask[:,0] = 0.0
+    mask[0] = 0.0
+    a_nm *= mask
+    b_nm *= mask
+    #a_nm[10:], b_nm[10:] = 0.0, 0.0
+    #a_nm[:,:5], b_nm[:,:5] = 0.0, 0.0
+
+    zinv = qfit.build_map(x, y, a_nm=a_nm, b_nm=b_nm, curv=0.0)
+
+    im = plt.imshow(zinv)
+    plt.colorbar(im, orientation='vertical')
+    plt.show()
+
+def residual(fname, m_max=None, n_max=None):
+    zmap, x, y = load_mahr_file(fname)
+    qfit = qf.QSpectrum(m_max=m_max, n_max=n_max)
+    qfit.data_map(x=x, y=y, zmap=zmap)
+    a_nm, b_nm = qfit.q_fit(m_max, n_max)
+
+    zinv = qfit.build_map(x, y, a_nm=a_nm, b_nm=b_nm, extend=0.95)
+    cond = zinv != 0.0
+    diff = np.extract(cond, zmap - zinv)
+    diff -= np.mean(diff)
+
+    zmap.fill(np.nan)
+    np.place(zmap, cond, diff)
+    im = plt.imshow(zmap)
+    plt.colorbar(im, orientation='vertical')
+    plt.show()
+
+def qspectrum(fname, m_max=None, n_max=None, show_rotnl=False):
     zmap, x, y = load_mahr_file(fname)
     start = time.time()
     qmap = qf.qspec(x, y, zmap, m_max=m_max, n_max=n_max)
@@ -112,10 +153,11 @@ def process_file(fname, m_max=None, n_max=None, show_rotnl=False):
 
 if __name__ == "__main__":
     def usage():
-        print('qspectrum.py --mmax=500 --nmax=500 --rotnl=False filename')
+        print('qspectrum.py --mmax=500 --nmax=500 --rotnl=False [qspec|resid|filter] filename')
     try:
         opts, args = getopt.getopt(sys.argv[1:],"",["mmax=", "nmax=", "rotnl="])
-        fname = args[0]
+        process = args[0]
+        fname = args[1]
     except (getopt.GetoptError, IndexError):
         usage()
         sys.exit(2)
@@ -131,5 +173,12 @@ if __name__ == "__main__":
         else:
             usage()
             sys.exit()
-
-    process_file(fname, m_max=mmax, n_max=nmax, show_rotnl=rotnl)
+    if process == "qspec":
+        qspectrum(fname, m_max=mmax, n_max=nmax, show_rotnl=rotnl)
+    elif process == "resid":
+        residual(fname, m_max=mmax, n_max=nmax)
+    elif process == "filter":
+        filter(fname, m_max=mmax, n_max=nmax)
+    else:
+        usage()
+        sys.exit()

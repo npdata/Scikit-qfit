@@ -49,13 +49,11 @@ class QSpectrum(object):
 
     def _precompute_factors(self, m_max, n_max):
 
-        if (self.m_max is not None) and (m_max <= self.m_max) and (self.n_max is not None) and (n_max <= self.n_max):
-            self.m_disp = m_max
-            self.n_disp = n_max
-            return
-
         self.m_disp = m_max
         self.n_disp = n_max
+        if (m_max == self.m_max) and (n_max == self.n_max):
+            return
+
         self.m_max = max(m_max, 3)
         self.n_max = max(n_max, 3)
         self.k_max = self.n_max + 2
@@ -425,8 +423,9 @@ class QSpectrum(object):
 
         return r_max
 
-    def _radial_sum(self, av, x):
+    def _radial_sum(self, av, x, inc_deriv=False):
         # The implementation follows equations 3.4 - 3.9 of [3]
+        # The deivative is based on 3.10 and 3.11 of [3]
 
         t_4x = 2.0 - 4.0 * x
         n = self.n_max
@@ -434,26 +433,36 @@ class QSpectrum(object):
             fact = np.ones_like(x)
         else:
             fact = 1.0
+        zero = 0.0 * fact
 
         try:
             b_ = fact * (av[n] / self.smFn[n])
             b = (av[n - 1] - self.smGn[n - 1] * b_) / self.smFn[n - 1]
             alpha_ = b_
             alpha = b + t_4x * alpha_
+            afp_ = zero
+            afp = -4 * alpha_
+
         except (IndexError):
             if n == 0:
-                return fact * (av[0] / self.smFn[0])
+                return fact * (av[0] / self.smFn[0]), zero
             else:
-                return 0.0 * fact
+                return zero, zero
 
         for i in reversed(range(n - 1)):
             b_, b = b, (av[i] - self.smGn[i] * b - self.smHn[i] * b_) / self.smFn[i]
             alpha_, alpha = alpha, b + t_4x * alpha - alpha_
+            if inc_deriv:
+                afp_, afp = afp, t_4x * afp - afp_ - 4 * alpha_
 
-        return 2 * (alpha + alpha_)
+        if inc_deriv:
+            return 2 * (alpha + alpha_), 2 * (afp + afp_)
+        else:
+            return 2 * (alpha + alpha_), None
 
-    def _azimuthal_sum(self, c_mn, x):
+    def _azimuthal_sum(self, c_mn, x, inc_deriv=False):
         # The implementation follows equations B.4 and B.6 of [2]
+        # with the derivative based on B.10 and B.11 of [2]
         # The process generates some large number in the recursion and
         # these terms are controlled when the u^m term is applied. This
         # function progressively applies the u^m term to reduce the
@@ -462,7 +471,6 @@ class QSpectrum(object):
         # This solution transposes the data structure so that the numpy
         # broadcast can be applied when performing the element wise multiplication
         # as it is about 25% faster than extending the matrices.
-
         def roll_u(u_cnt, u, upj):
             if u_cnt > 0:
                 u = np.roll(u, 1, axis=1)
@@ -484,30 +492,45 @@ class QSpectrum(object):
         n = self.n_max
         dv_ = np.outer(ones, cnm[n] / smFt[n])
         alpha_ = upj * dv_
+        if inc_deriv:
+            afp_ = np.zeros_like(u)
+
         if n > 0:
-            alpha_2 = None
-            alpha_3 = None
+            alpha_2, alpha_3 = None, None
             uix, u, upj = roll_u(uix, u, upj)
             dv = (cnm[n - 1] - smGt[n - 1] * dv_) / smFt[n - 1]
             alpha = upj * dv + u * (bgAt[n - 1] + np.outer(x, bgBt[n - 1])) * alpha_
-
+            if inc_deriv:
+                afp_2, afp_3 = None, None
+                afp = u * bgBt[n - 1] * alpha_
             for i in reversed(range(n - 1)):
                 uix, u, upj = roll_u(uix, u, upj)
                 u2 = u * u
                 dv = (cnm[i] - dv * smGt[i]) / smFt[i]
                 alpha_3, alpha_2, alpha_, alpha = alpha_2, alpha_, alpha, dv * upj + u * (
                     bgAt[i] + np.outer(x, bgBt[i])) * alpha - u2 * bgCt[i + 1] * alpha_
+                if inc_deriv:
+                    afp_3, afp_2, afp_, afp = afp_2, afp_, afp, u * bgBt[i] * alpha_ + u * (
+                    bgAt[i] + np.outer(x, bgBt[i])) * afp - u2 * bgCt[i + 1] * afp_
             if n > 2:
                 alpha[:, 0] -= 0.8 * alpha_3[:, 0]  # scaled by 0.5 before returned for m = 1, n > 2
+                if inc_deriv:
+                    afp[:, 0] -= 0.8 * afp_3[:, 0]
 
             # if n < m then complete the u^m scaling of the data
             while uix > 0:
                 uix, u, _ = roll_u(uix, u, None)
                 alpha *= u
+                if inc_deriv:
+                    afp *= u
         else:
             alpha = alpha_
+            afp = afp_
 
-        return 0.5 * alpha.transpose()
+        if inc_deriv:
+            return 0.5 * alpha.transpose(), 0.5 * afp.transpose()
+        else:
+            return 0.5 * alpha.transpose(), None
 
     def _azimuthal_term(self, a_mn, b_mn, u, theta):
         # a and b are m by n matrices of coefficients
@@ -522,26 +545,76 @@ class QSpectrum(object):
         else:
             usq = np.array([u * u])
 
-        av = self._azimuthal_sum(a_mn, usq)
-        bv = self._azimuthal_sum(b_mn, usq)
+        av, _ = self._azimuthal_sum(a_mn, usq)
+        bv, _ = self._azimuthal_sum(b_mn, usq)
         vec = cosf[1:] * av + sinf[1:] * bv
         return np.sum(vec, axis=0)
 
-    def _fitted_sag(self, a_mn, b_mn, rho, theta, rho_max, curv):
-        # calculates the conic result along with the radial and azimuthal
-        # contributions
-        u = rho / rho_max
-        val = self._radial_sum(a_mn[0, :], u ** 2)
-        val *= u ** 2 * (1 - u ** 2)
-        val += self._azimuthal_term(a_mn, b_mn, u, theta)
+    def _fitted_sag(self, a_mn, b_mn, rho, theta, radius, curv, inc_deriv):
 
-        # add the conic section
-        sqf = np.sqrt(1 - curv ** 2 * rho ** 2)
-        val /= sqf
-        val += curv * rho ** 2 / (1 + sqf)
-        return val
+        # # calculates the conic result along with the radial and azimuthal
+        # # contributions
+        # u = rho / rho_max
+        # val, _ = self._radial_sum(a_mn[0, :], u ** 2)
+        # val *= u ** 2 * (1 - u ** 2)
+        # val += self._azimuthal_term(a_mn, b_mn, u, theta)
+        #
+        # # add the spherical section
+        # sqf = np.sqrt(1 - curv ** 2 * rho ** 2)
+        # val /= sqf
+        # val += curv * rho ** 2 / (1 + sqf)
+        # return val, None, None
 
-    def _build_regular_map(self, rho, theta, curv, radius, a_mn, b_mn):
+        # Build the radial component first and expand for the theta values
+        u = rho / radius
+        if hasattr(u, '__len__'):
+            u_2 = u ** 2
+        else:
+            u_2 = np.array([u**2])
+        R, Rp = self._radial_sum(a_mn[0, :], u_2, inc_deriv=inc_deriv)
+        radial = R * u_2 * (1 - u_2)
+
+        # The asymmetric terms as [m,k] matrices
+        mv = np.arange(0, self.m_max + 1, dtype=np.float)
+        mv_theta = np.outer(mv, theta)
+        sinf = np.sin(mv_theta)
+        cosf = np.cos(mv_theta)
+        av, avp = self._azimuthal_sum(a_mn, u_2, inc_deriv=inc_deriv)
+        bv, bvp = self._azimuthal_sum(b_mn, u_2, inc_deriv=inc_deriv)
+        vec = cosf[1:] * av + sinf[1:] * bv
+        asym = np.sum(vec, axis=0)
+
+        # Add the spherical factors
+        psi = np.sqrt(1 - curv ** 2 * rho ** 2)
+        sum = (radial + asym) / psi
+        sum += curv * rho ** 2 / (1 + psi)
+
+        if inc_deriv:
+            # Build the derivative in rho and theta maps
+            psi_2 = psi * psi
+            radialp  = R * u * (1 + psi_2 - u_2*(1 + 3*psi_2)) / (radius * psi * psi_2)
+            radialp += Rp * 2 * u_2 * u * (1 - u_2) / (radius * psi)
+            radialp += curv * rho / psi
+
+            # Add the azimuthmal contrib to the radial derivative
+            ones = np.ones_like(u)
+            mvs = np.outer(mv, ones)
+            mcosf = cosf * mvs
+            msinf = sinf * mvs
+            azt_rp  = 2 * u * np.sum((cosf[1:] * avp + sinf[1:] * bvp), axis=0)
+            azt_rp += np.sum((mcosf[1:] * av + msinf[1:] * bv), axis=0) / u
+            azt_rp /= (radius * psi)
+            azt_rp += (curv**2 * rho / psi_2) * asym / psi
+            radialp += azt_rp
+
+            # Now add the azimuthal term
+            azt_thp = np.sum((-msinf[1:] * av + mcosf[1:] * bv), axis=0) / psi
+
+            return sum, radialp, azt_thp
+        else:
+            return sum, None, None
+
+    def _build_regular_map(self, rho, theta, curv, radius, a_mn, b_mn, inc_deriv):
 
         # Builds a regular map where rho and theta are the axis values.
         ones = np.ones_like(theta)
@@ -549,8 +622,8 @@ class QSpectrum(object):
         # Build the radial component first and expand for the theta values
         u = rho / radius
         u_2 = u ** 2
-        val = self._radial_sum(a_mn[0, :], u_2)
-        val *= u_2 * (1 - u_2)
+        R, Rp = self._radial_sum(a_mn[0, :], u_2, inc_deriv=inc_deriv)
+        val = R * u_2 * (1 - u_2)
         radial = np.outer(ones, val)  # [j,m]
 
         # The asymmetric terms as [m,k] matrices
@@ -558,27 +631,57 @@ class QSpectrum(object):
         theta_mv = np.outer(theta, mv)
         sinf = np.sin(theta_mv)
         cosf = np.cos(theta_mv)
-        av = self._azimuthal_sum(a_mn, u_2)
-        bv = self._azimuthal_sum(b_mn, u_2)
+        av, avp = self._azimuthal_sum(a_mn, u_2, inc_deriv=inc_deriv)
+        bv, bvp = self._azimuthal_sum(b_mn, u_2, inc_deriv=inc_deriv)
         as_jk = cosf[:, 1:].dot(av) + sinf[:, 1:].dot(bv)
 
         # Add the spherical factors
-        sqf = np.sqrt(1 - curv ** 2 * rho ** 2)
-        sum_jk = (radial + as_jk) / np.outer(ones, sqf)
-        sum_jk += np.outer(ones, curv * rho ** 2 / (1 + sqf))
+        psi = np.sqrt(1 - curv ** 2 * rho ** 2)
+        sum_jk = (radial + as_jk) / psi
+        sum_jk += curv * rho ** 2 / (1 + psi)
 
-        return sum_jk.transpose()
+        if inc_deriv:
+            # Build the derivative in rho and theta maps
+            psi_2 = psi * psi
+            valp  = R * u * (1 + psi_2 - u_2*(1 + 3*psi_2)) / (radius * psi * psi_2)
+            valp += Rp * 2 * u_2 * u * (1 - u_2) / (radius * psi)
+            valp += curv * rho / psi
+            radialp = np.outer(ones, valp)
 
-    def _build_map(self, rho, theta, curv, radius, a_mn, b_mn):
+            # Add the azimuthmal contrib to the radial derivative
+            mcosf = cosf * mv
+            msinf = sinf * mv
+            azt_rp  = 2 * u * (cosf[:, 1:].dot(avp) + sinf[:, 1:].dot(bvp))
+            azt_rp += (mcosf[:, 1:].dot(av) + msinf[:, 1:].dot(bv)) / u
+            azt_rp /= (radius * psi)
+            azt_rp += (curv**2 * rho / psi_2) * as_jk / psi
+            radialp += azt_rp
+
+            # Now add the azimuthal term
+            azt_thp = (-msinf[:, 1:].dot(av) + mcosf[:, 1:].dot(bv)) / psi
+
+            return sum_jk.transpose(), radialp.transpose(), azt_thp.transpose()
+        else:
+            return sum_jk.transpose(), None, None
+
+    def _build_map(self, rho, theta, curv, radius, a_mn, b_mn, inc_deriv):
 
         block_size = 500
         zc = np.zeros_like(rho)
+        if inc_deriv:
+            rhop, thetap = np.zeros_like(rho), np.zeros_like(rho)
+        else:
+            rhop, thetap = None, None
         blocks = int(len(zc) / block_size) + 1
         for i in range(blocks):
             lo = i * block_size
             hi = (i + 1) * block_size
-            zc[lo:hi] = self._fitted_sag(a_mn, b_mn, rho[lo:hi], theta[lo:hi], radius, curv)
-        return zc
+            zc[lo:hi], df_dr, df_dth = self._fitted_sag(a_mn, b_mn, rho[lo:hi], theta[lo:hi], radius, curv, inc_deriv)
+            if inc_deriv:
+                rhop[lo:hi] = df_dr
+                thetap[lo:hi] = df_dth
+
+        return zc, rhop, thetap
 
     def _check_transpose(self, a_nm, b_nm):
         n, m = a_nm.shape
@@ -590,7 +693,20 @@ class QSpectrum(object):
             return a.transpose(), b.transpose()
         return a_nm.transpose(), b_nm.transpose()
 
-    def build_map(self, x, y, curv, radius, a_nm, b_nm, centre=(0.0, 0.0), extend=1.0, interpolated=True):
+    def _build_cartesian_gradient(self, dfdr, dfdth, rho_xy, theta_xy):
+
+        """
+        df/dx = cos(theta)df/dr − (1/r)sin(theta)df/dth
+        df/dy = sin(theta)df/dr + (1/r)cos(theta)df/dth
+        """
+        cos_theta = np.cos(theta_xy)
+        sin_theta = np.sin(theta_xy)
+        dfdx = cos_theta * dfdr - sin_theta * dfdth / rho_xy
+        dfdy = sin_theta * dfdr + cos_theta * dfdth / rho_xy
+
+        return dfdx, dfdy
+
+    def build_map(self, x, y, a_nm, b_nm, curv=None, radius=None, centre=None, extend=1.0, interpolated=True, inc_deriv=False):
         """
         Creates the spline interpolator for the map, determines the best fit sphere
         and minimum valid radius.
@@ -599,24 +715,44 @@ class QSpectrum(object):
             x, y:   array_like
                     The interpolator uses grid points defined by the coordinate arrays x, y.
                     The arrays must be sorted to increasing order.
-            curv:   float
-                    Nominal curvature for the part
-            radius: float
-                    Defines the circular domain from the centre.
             a_nm, b_nm: 2D array
                     The cosine and sine terms for the Q freeform polynominal
+            curv:   float
+                    Nominal curvature for the part. If None uses the estimated value from the previous fit.
+            radius: float
+                    Defines the circular domain from the centre. If None uses the estimated value from the previous fit.
+
             centre: (cx, cy)
-                    The centre of the part in axis coordinates.
+                    The centre of the part in axis coordinates. If None uses the estimated value from previous fit.
             extend: float
                     Generate a map over extend * radius from the centre
-            interpolated:   boolean
+            interpolated: boolean
                     If True uses a high resolution regular polar grid to build the underlying
                     data and a spline interpolation to extract the (x, y) grid, otherwise it evaluates
                     each (x, y) point exactly. The non-interpolated solution is 100 times slower.
+            inc_deriv: boolean
+                    Return the X and Y derivatives as additional maps
         Returns:
             zmap:   2-D array
                     Data map with shape (x.size, y.size)
+            xder:   2-D array
+                    X derivative map with shape (x.size, y.size) if inc_deriv is True, else None
+            yder:   2-D array
+                    Y derivative map with shape (x.size, y.size) if inc_deriv is True, else None
         """
+        def remap(map):
+            zv = np.zeros_like(xv)
+            zv.fill(np.nan)
+            np.place(zv, cond, map)
+            return zv.reshape((len(x), len(y)))
+
+        if curv is None:
+            curv = self.bfs_curv
+        if radius is None:
+            radius = self.radius
+        if centre is None:
+            centre = self.centre
+
         a_mn, b_mn = self._check_transpose(a_nm, b_nm)
         xx, yy = np.meshgrid(x - centre[0], y - centre[1], indexing='ij')
         xv, yv = xx.flatten(), yy.flatten()
@@ -625,29 +761,38 @@ class QSpectrum(object):
         cond = rv <= extend * radius
         rvc = np.extract(cond, rv)
         thc = np.extract(cond, thv)
+        dfdx, dfdy = None, None
         if interpolated:
             # Builds a regular polar map and then interpolates to the [x,y] grid
             # First find the range of the polar grid that covers the rectangle
             # and adds additional points in the polar grid to account for the
             # spline interpolation
             K = max(300, int(len(x) / 2))
-            J = 3 * K
-            rmin, rmax = rv.min(), min(rv.max(), extend * radius)
+            J = 6 * K
+            rmin, rmax = rv.min(), rv.max()
+            rdel = self.shrink_pixels * (rmax - rmin) / K
+            rmin = rmin - rdel
+            rmax = min(rmax + rdel, extend * radius)
+            rho = np.linspace(rmin, rmax, K + 2 * self.shrink_pixels)
             tdel = self.shrink_pixels * (thv.max() - thv.min()) / J
-
-            rho = np.linspace(rmin, rmax, K)
             theta = np.linspace(thv.min() - tdel, thv.max() + tdel, J + 2 * self.shrink_pixels)
 
             # Build the regular polar map and initialize the interpolation function
-            zpv = self._build_regular_map(rho, theta, curv, radius, a_mn=a_mn, b_mn=b_mn)
+            zpv, d_dr, d_dtheta = self._build_regular_map(rho, theta, curv, radius, a_mn=a_mn, b_mn=b_mn, inc_deriv=inc_deriv)
             interp = interpolate.RectBivariateSpline(rho, theta, zpv, kx=3, ky=3)
             zinv = interp.ev(rvc, thc)
+            if inc_deriv:
+                dfdr = interpolate.RectBivariateSpline(rho, theta, d_dr, kx=3, ky=3).ev(rvc, thc)
+                dfdth = interpolate.RectBivariateSpline(rho, theta, d_dtheta, kx=3, ky=3).ev(rvc, thc)
         else:
-            zinv = self._build_map(rvc, thc, curv, radius, a_mn, b_mn)
+            zinv, dfdr, dfdth = self._build_map(rvc, thc, curv, radius, a_mn, b_mn, inc_deriv)
 
-        zv = np.zeros_like(xv)
-        np.place(zv, cond, zinv)
-        return zv.reshape((len(x), len(y)))
+        zmap = remap(zinv)
+        if inc_deriv:
+            _dfdx, _dfdy = self._build_cartesian_gradient(dfdr, dfdth, rvc, thc)
+            dfdx = remap(_dfdx)
+            dfdy = remap(_dfdy)
+        return zmap, dfdx, dfdy
 
     def data_map(self, x, y, zmap, centre=None, radius=None, shrink_pixels=7, bfs_curv=None):
         """

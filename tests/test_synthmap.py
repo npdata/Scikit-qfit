@@ -14,6 +14,8 @@ import numpy as np
 from numpy.polynomial.polynomial import polyval2d
 from skqfit.qspectre import QSpectrum
 from matplotlib import pyplot as plt
+from scipy.signal import medfilt2d
+from example.qspectrum import disp_qspec
 
 def display_map(map, centre=None, radius=None):
     im = plt.imshow(map)
@@ -59,6 +61,41 @@ def test_synthmap(as_map=False, inverse=False):
         z = sag_xy(xv, yv)
         return x, y, z.reshape((x.size, y.size))
 
+    def test_gradient(qf, radius, curv, a_nm, b_nm):
+        points = 500
+        rho = np.linspace(0.01, radius, points)
+        theta = np.linspace(-np.pi, np.pi, 6*points)
+        a_mn, b_mn = a_nm.transpose(), b_nm.transpose()
+        zpv, ddr, ddth = qf._build_regular_map(rho, theta, curv, radius, a_mn=a_mn, b_mn=b_mn,
+                                                      inc_deriv=True)
+
+        grad = np.gradient(zpv)
+        gx = grad[0] / (rho[1] - rho[0])
+        gth = grad[1] / (theta[1] - theta[0])
+
+        err_rad = ddr - gx
+        rad_lim = np.nanmax(err_rad[1:-1,1:-1]) - np.nanmin(err_rad[1:-1,1:-1])
+        err_theta = ddth - gth
+        th_lim = np.nanmax(err_theta[1:-1,1:-1]) - np.nanmin(err_theta[1:-1,1:-1])
+
+        display_map(err_rad[1:-1,1:-1])
+        display_map(err_theta[1:-1,1:-1])
+        pass
+
+    def test_xy_gradient(zmap, dfdx, dfdy, x, y):
+        grad = np.gradient(zmap)
+        gx = grad[0] / (x[1] - x[0])
+        dy = grad[1] / (y[1] - y[0])
+
+        err_dx = dfdx - gx
+        gx_err = np.nanmax(err_dx[1:-1,1:-1]) - np.nanmin(err_dx[1:-1,1:-1])
+        err_dy = dfdy - dy
+        gy_err = np.nanmax(err_dy[1:-1,1:-1]) - np.nanmin(err_dy[1:-1,1:-1])
+
+        #display_map(err_dx[1:-1,1:-1])
+        #display_map(err_dy[1:-1,1:-1])
+        return max(gx_err, gy_err)
+        
     exp_ispec = np.array([[70531,   225291, 25895,  199399, 3583,   2651,   1886,   339,    55, 41, 5],
                           [43,	    223995,	11377,	198,	2604,	801,	46,	    37,	    5,	0,	0],
                           [82,	    12916,	3592,	994,	158,	10,	    5,	    0,	    0,	0,	0],
@@ -69,8 +106,8 @@ def test_synthmap(as_map=False, inverse=False):
     bfs_c  = sag_xy.curv
     points = 500
     if False:
-        m_max = 500
-        n_max = 200
+        m_max = 300
+        n_max = 300
     else:
         m_max = 10
         n_max = 9
@@ -78,32 +115,81 @@ def test_synthmap(as_map=False, inverse=False):
 
     if as_map:
         x, y, zmap = build_map(points)
-        qfit.data_map(x, y, zmap, centre=(0.,0.), radius=sag_xy.rmax, bfs_curv=bfs_c)
+        qfit.data_map(x, y, zmap, centre=(0.,0.), radius=sag_xy.rmax)
     else:
         qfit.set_sag_fn(sag_fn, sag_xy.rmax, bfs_c)
 
+    start = time.time()
     a_nm, b_nm = qfit.q_fit(m_max, n_max)
+    print('fit done, time %.3fs' % (time.time() - start))
     qspec = np.sqrt(np.square(a_nm) + np.square(b_nm))
+    disp_qspec(qspec)
 
     ispec = np.round(1e6*qspec).astype(int)
     idiff = ispec[:5,:11] - exp_ispec
     errors = np.count_nonzero(idiff)
-    inv_err = 0.0
+    inv_err, grad_err = 0.0, 0.0
+
     if inverse:
         if not as_map:
             x, y, zmap = build_map(points)
         start = time.time()
-        zinv = qfit.build_map(x, y, bfs_c, radius=sag_xy.rmax, a_nm=a_nm, b_nm=b_nm, interpolated=True)
+        zinv, dfdx, dfdy = qfit.build_map(x, y, radius=sag_xy.rmax, centre=(0.0,0.0), a_nm=a_nm, b_nm=b_nm, interpolated=False, inc_deriv=True)
         print('inverse done, time %.3fs' % (time.time() - start))
+        grad_err = test_xy_gradient(zinv, dfdx, dfdy, x, y)
         cond = zinv != 0.0
         diff = np.extract(cond, zmap - zinv)
         # z = np.zeros_like(zmap)
+        # z.fill(np.nan)
         # np.place(z, cond, diff)
         # display_map(z)
-        inv_err = max(math.fabs(np.max(diff)), math.fabs(np.min(diff)))
+        inv_err = max(math.fabs(np.nanmax(diff)), math.fabs(np.nanmin(diff)))
 
-    assert errors == 0 and inv_err < 1.0e-7
+    assert errors == 0 and inv_err < 1.0e-7 and grad_err < 1.0e-5
+
+from scipy import interpolate
+def _test_spline():
+    points = 100
+    x = np.linspace(-1.0,1.0,points)
+    y = np.linspace(-1.0,1.0,points)
+    zmap = np.random.normal(0, 1.0, points*points).reshape((points,points))
+    zmap = medfilt2d(zmap)
+    #display_map(zmap)
+    itp = interpolate.RectBivariateSpline(x, y, zmap)
+
+    xx, yy = np.meshgrid(x, y, indexing='ij')
+    xv, yv = xx.flatten(), yy.flatten()
+    rv = np.hypot(xv, yv)
+    thv = np.arctan2(yv, xv)
+    cond = rv <= 1.0
+    rvc = np.extract(cond, rv)
+    thc = np.extract(cond, thv)
+
+    # zinv = itp.ev(xv, yv).reshape((len(x), len(y)))
+    # diff = zinv - zmap
+    # display_map(diff)
+
+    kpoints = 400
+    rho = np.linspace(0.0, 1.0, kpoints)
+    theta = np.linspace(-3.2, 3.2, 6 * kpoints)
+    rr, tt = np.meshgrid(rho, theta, indexing='ij')
+    rr, tt = rr.flatten(), tt.flatten()
+    xp, yp = rr * np.cos(tt), rr * np.sin(tt)
+    pmap = itp.ev(xp, yp).reshape((len(rho), len(theta)))
+
+    #display_map(pmap)
+    itp2 = interpolate.RectBivariateSpline(rho, theta, pmap)
+
+    zinv = itp2.ev(rvc, thc)
+    zv = np.zeros_like(xv)
+    zv.fill(np.nan)
+    np.place(zv, cond, zinv)
+    zv = zv.reshape((len(x), len(y)))
+    zv = zv - zmap
+    display_map(zv)
+    print('Done')
 
 if __name__ == "__main__":
+    #_test_spline()
     test_synthmap(as_map=False, inverse=True)
     test_synthmap(as_map=True, inverse=True)
