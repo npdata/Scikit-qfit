@@ -12,14 +12,14 @@ import math
 import numpy as np
 
 from scipy import interpolate
+
 from scipy.misc import factorial, factorial2
 from scipy import ndimage
 
 from skqfit.asmjacp import AsymJacobiP
 
 # trap on warnings when debugging
-np.seterr(over='raise')
-
+#np.seterr(over='raise')
 
 class QSpectrum(object):
     """
@@ -45,6 +45,7 @@ class QSpectrum(object):
             self._precompute_factors(m_max, n_max)
         self.shrink_pixels = 7
         self.centre_sag = 0.0
+        self.centre = (0.0, 0.0)
         self.polar_sag_fn = None
 
     def _precompute_factors(self, m_max, n_max):
@@ -460,6 +461,34 @@ class QSpectrum(object):
         else:
             return 2 * (alpha + alpha_), None
 
+    def _azimuthal_sum_centre(self, c_mn, K):
+        # This is a special case of the azimuthal sum for u**2 = 0
+        # that does not include the u**m scaling or the derivative.
+        # It is only evaluated for m = 1 and x = 0
+
+        ones = np.ones(K, np.float)
+        cnm = c_mn[1]
+        smFt, smGt = self.smF[1], self.smG[1]
+        bgAt, bgBt, bgCt = self.bgA[1].transpose(), self.bgB[1], self.bgC[1]
+        n = self.n_max
+        dv_ = ones * (cnm[n] / smFt[n])
+        alpha_ = dv_
+
+        if n > 0:
+            alpha_2, alpha_3 = None, None
+            dv = (cnm[n - 1] - smGt[n - 1] * dv_) / smFt[n - 1]
+            alpha = dv + bgAt[n - 1] * alpha_
+            for i in reversed(range(n - 1)):
+                dv = (cnm[i] - dv * smGt[i]) / smFt[i]
+                alpha_3, alpha_2, alpha_, alpha = alpha_2, alpha_, alpha, dv + \
+                                                  bgAt[i] * alpha - bgCt[i + 1] * alpha_
+            if n > 2:
+                alpha -= 0.8 * alpha_3  # scaled by 0.5 before returned for m = 1, n > 2
+        else:
+            alpha = alpha_
+
+        return 0.5 * alpha
+
     def _azimuthal_sum(self, c_mn, x, inc_deriv=False):
         # The implementation follows equations B.4 and B.6 of [2]
         # with the derivative based on B.10 and B.11 of [2]
@@ -596,13 +625,27 @@ class QSpectrum(object):
             radialp += Rp * 2 * u_2 * u * (1 - u_2) / (radius * psi)
             radialp += curv * rho / psi
 
-            # Add the azimuthmal contrib to the radial derivative
+            # Add the azimuthmal contrib to the radial derivative. u = 0 is a special
+            # case as the division by zero can be avoided as av is scaled by u**m and
+            # divided by u to re-use a previous sum. The actual product is u**(m-1)
             ones = np.ones_like(u)
             mvs = np.outer(mv, ones)
             mcosf = cosf * mvs
             msinf = sinf * mvs
-            azt_rp  = 2 * u * np.sum((cosf[1:] * avp + sinf[1:] * bvp), axis=0)
-            azt_rp += np.sum((mcosf[1:] * av + msinf[1:] * bv), axis=0) / u
+            azt_rp = 2 * u * np.sum((cosf[1:] * avp + sinf[1:] * bvp), axis=0)
+            if np.min(u) > 0.0:
+                azt_rp += np.sum((mcosf[1:] * av + msinf[1:] * bv), axis=0) / u
+            else:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    azt_rp += np.sum((mcosf[1:] * av + msinf[1:] * bv), axis=0) / u
+                    # Fix up the points where u = 0.
+                    cond = (u == 0.0)
+                    uc = np.extract(cond, u)
+                    thc = np.extract(cond, theta)
+                    av_0 = self._azimuthal_sum_centre(a_mn, len(uc))
+                    bv_0 = self._azimuthal_sum_centre(b_mn, len(uc))
+                    sumc = np.cos(thc) * av_0 + np.sin(thc) * bv_0
+                    np.place(azt_rp, cond, sumc)
             azt_rp /= (radius * psi)
             azt_rp += (curv**2 * rho / psi_2) * asym / psi
             radialp += azt_rp
@@ -648,11 +691,25 @@ class QSpectrum(object):
             valp += curv * rho / psi
             radialp = np.outer(ones, valp)
 
-            # Add the azimuthmal contrib to the radial derivative
+            # Add the azimuthmal contrib to the radial derivative. u = 0 is a special
+            # case as the division by zero can be avoided as av is scaled by u**m and
+            # divided by u to re-use a previous sum. The actual product is u**(m-1)
             mcosf = cosf * mv
             msinf = sinf * mv
-            azt_rp  = 2 * u * (cosf[:, 1:].dot(avp) + sinf[:, 1:].dot(bvp))
-            azt_rp += (mcosf[:, 1:].dot(av) + msinf[:, 1:].dot(bv)) / u
+            azt_rp = 2 * u * (cosf[:, 1:].dot(avp) + sinf[:, 1:].dot(bvp))
+
+            with np.errstate(divide='ignore', invalid='ignore'):
+                azt_rp += (mcosf[:, 1:].dot(av) + msinf[:, 1:].dot(bv)) / u
+                # Fix up the columns where u = 0.
+                cond = (u == 0.0)
+                cix = np.extract(cond, np.arange(len(u)))
+                if len(cix) > 0:
+                    av_0 = self._azimuthal_sum_centre(a_mn, len(cix))
+                    bv_0 = self._azimuthal_sum_centre(b_mn, len(cix))
+                    sumc = np.outer(av_0, np.cos(theta)) + np.outer(bv_0, np.sin(theta))
+                    for i in range(len(cix)):
+                        azt_rp[:,cix[i]] = sumc[i]
+
             azt_rp /= (radius * psi)
             azt_rp += (curv**2 * rho / psi_2) * as_jk / psi
             radialp += azt_rp
@@ -693,18 +750,87 @@ class QSpectrum(object):
             return a.transpose(), b.transpose()
         return a_nm.transpose(), b_nm.transpose()
 
-    def _build_cartesian_gradient(self, dfdr, dfdth, rho_xy, theta_xy):
+    def _build_cartesian_gradient(self, dfdr, dfdth, rho_xy, theta_xy, curv, radius, a_mn, b_mn):
 
         """
         df/dx = cos(theta)df/dr − (1/r)sin(theta)df/dth
         df/dy = sin(theta)df/dr + (1/r)cos(theta)df/dth
+
+        Need to handle division by zero
         """
         cos_theta = np.cos(theta_xy)
         sin_theta = np.sin(theta_xy)
-        dfdx = cos_theta * dfdr - sin_theta * dfdth / rho_xy
-        dfdy = sin_theta * dfdr + cos_theta * dfdth / rho_xy
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            dfdx = cos_theta * dfdr - sin_theta * dfdth / rho_xy
+            dfdy = sin_theta * dfdr + cos_theta * dfdth / rho_xy
+
+            # Determine the correction when rho == 0 and replace value
+            if 0.0 in rho_xy:
+                zinv, _dfdr, _dfdth = self._build_map(np.array([0.0, 0.0]), np.array([0.0, 0.5*math.pi]),
+                                                    curv, radius, a_mn, b_mn, True)
+                dfdx[rho_xy == 0.0] = _dfdr[0]
+                dfdy[rho_xy == 0.0] = _dfdr[1]
 
         return dfdx, dfdy
+
+    def build_profile(self, xv, yv, a_nm, b_nm, curv=None, radius=None, centre=None, extend=1.0, inc_deriv=False):
+        """
+        Returns the nominal sag and optional derivatives along the vector or x, y coordinates. This routine
+        is suited to 1-D slices as it evaluates the sag and derivatives directly.
+
+        Parameters:
+            x, y:   array_like
+                    Arrays of values representing the coordinate arrays x, y.
+            a_nm, b_nm: 2D array
+                    The cosine and sine terms for the Q freeform polynominal
+            curv:   float
+                    Nominal curvature for the part. If None uses the estimated value from the previous fit.
+            radius: float
+                    Defines the circular domain from the centre. If None uses the estimated value from the previous fit.
+            centre: (cx, cy)
+                    The centre of the part in axis coordinates. If None uses the estimated value from previous fit.
+            extend: float
+                    Generate a map over extend * radius from the centre
+            inc_deriv: boolean
+                    Return the X and Y derivatives as additional maps
+        Returns:
+            zval:   array
+                    Sag values for the (x, y) sequence
+            xder:   array
+                    X derivative map for the (x, y) sequence if inc_deriv is True, else None
+            yder:   array
+                    Y derivative map for the (x, y) sequence if inc_deriv is True, else None
+        """
+        if curv is None:
+            curv = self.bfs_curv
+        if radius is None:
+            radius = self.radius
+        if centre is None:
+            centre = self.centre
+
+        a_mn, b_mn = self._check_transpose(a_nm, b_nm)
+        xx, yy = xv - centre[0], yv - centre[1]
+        rv = np.hypot(xv, yv)
+        thv = np.arctan2(yv, xv)
+        cond = rv <= extend * radius
+        rvc = np.extract(cond, rv)
+        thc = np.extract(cond, thv)
+
+        def remap(vec):
+            zv = np.zeros_like(xv)
+            zv.fill(np.nan)
+            np.place(zv, cond, vec)
+            return zv
+
+        dfdx, dfdy = None, None
+        zv, dfdr, dfdth = self._build_map(rvc, thc, curv, radius, a_mn, b_mn, inc_deriv)
+        zval = remap(zv)
+        if inc_deriv:
+            _dfdx, _dfdy = self._build_cartesian_gradient(dfdr, dfdth, rvc, thc, curv, radius, a_mn, b_mn)
+            dfdx, dfdy = remap(_dfdx), remap(_dfdy)
+
+        return zval, dfdx, dfdy
 
     def build_map(self, x, y, a_nm, b_nm, curv=None, radius=None, centre=None, extend=1.0, interpolated=True, inc_deriv=False):
         """
@@ -770,7 +896,7 @@ class QSpectrum(object):
             K = max(300, int(len(x) / 2))
             J = 6 * K
             rmin, rmax = rv.min(), rv.max()
-            rdel = self.shrink_pixels * (rmax - rmin) / K
+            rdel = 0.0 #self.shrink_pixels * (rmax - rmin) / K
             rmin = rmin - rdel
             rmax = min(rmax + rdel, extend * radius)
             rho = np.linspace(rmin, rmax, K + 2 * self.shrink_pixels)
@@ -789,7 +915,7 @@ class QSpectrum(object):
 
         zmap = remap(zinv)
         if inc_deriv:
-            _dfdx, _dfdy = self._build_cartesian_gradient(dfdr, dfdth, rvc, thc)
+            _dfdx, _dfdy = self._build_cartesian_gradient(dfdr, dfdth, rvc, thc, curv, radius, a_mn, b_mn)
             dfdx = remap(_dfdx)
             dfdy = remap(_dfdy)
         return zmap, dfdx, dfdy
@@ -804,7 +930,7 @@ class QSpectrum(object):
                     The interpolator uses grid points defined by the coordinate arrays x, y. 
                     The arrays must be sorted to increasing order.
             zmap:   array_like
-                    2-D array of data with shape (x.size,y.size)
+                    2-D array of data with shape (x.size,y.size).
             centre: (cx, cy)
                     The centre of the part in axis coordinates. If None the centre is estimated
                     by a centre of mass calculation 
@@ -864,6 +990,7 @@ class QSpectrum(object):
         self.polar_sag_fn = sag_fn
         self.radius = radius
         self.pixel_radius = None
+        self.centre = (0.0, 0.0)
         self.centre_sag = float(sag_fn(0.0, 0.0))
         if bfs_curv is None:
             self._est_bfs()

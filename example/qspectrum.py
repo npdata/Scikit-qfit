@@ -1,7 +1,7 @@
 """
 Processing example using a Mahr file format (txt).
 
-The code loads a file, performs the q-spetcrum and displays the image.
+The code loads a file, builds the q-spectrum and displays the image.
 
 Note that invalids are replaced with NAN.
 
@@ -110,16 +110,11 @@ def filter(fname, m_max=None, n_max=None):
 
     # Apply suitable filter in q-space
     # In this case just remove the low order azimuthal and radial
-
     mask = np.ones_like(a_nm)
-    #for i in range(5,35):
-    #    mask[:,i] = 0.0
     mask[:,0] = 0.0
     mask[0] = 0.0
     a_nm *= mask
     b_nm *= mask
-    #a_nm[10:], b_nm[10:] = 0.0, 0.0
-    #a_nm[:,:5], b_nm[:,:5] = 0.0, 0.0
 
     zinv = qfit.build_map(x, y, a_nm=a_nm, b_nm=b_nm, curv=0.0)
 
