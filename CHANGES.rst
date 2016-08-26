@@ -2,9 +2,14 @@
 Changelog
 =========
 
+Version 0.1.4
+=============
+- Adds spectrum to topography functionality
+- Updated documentation and minor fixes
+
 Version 0.1.3
 =============
-- Fixed error when data has non invalids
+- Fixed error when data has invalids
 
 Version 0.1.2
 =============
