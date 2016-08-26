@@ -13,24 +13,8 @@ import time
 import numpy as np
 from numpy.polynomial.polynomial import polyval2d
 from skqfit.qspectre import QSpectrum
-from matplotlib import pyplot as plt
-from scipy.signal import medfilt2d
-from scipy import interpolate
-from example.qspectrum import disp_qspec
 
-def display_map(map, centre=None, radius=None):
-    im = plt.imshow(map)
-    plt.colorbar(im, orientation='vertical')
-
-    if not centre is None and not radius is None:
-        t = np.linspace(0.0, 2*np.pi, 200)
-        x = radius * np.cos(t) + centre[1]
-        y = radius * np.sin(t) + centre[0]
-        plt.plot(x, y, 'r-')
-
-    plt.show()
-
-def test_synthmap(as_map=False, inverse=False):
+def test_synthmap(as_map=False, inverse=True):
     def sag_fn(rhov, thetav):
         x = rhov*np.cos(thetav)
         y = rhov*np.sin(thetav)
@@ -64,27 +48,6 @@ def test_synthmap(as_map=False, inverse=False):
         xv, yv = np.meshgrid(x, y, indexing='ij')
         z = sag_xy(xv, yv)
         return x, y, z.reshape((x.size, y.size))
-
-    def test_gradient(qf, radius, curv, a_nm, b_nm):
-        points = 500
-        rho = np.linspace(0.01, radius, points)
-        theta = np.linspace(-np.pi, np.pi, 6*points)
-        a_mn, b_mn = a_nm.transpose(), b_nm.transpose()
-        zpv, ddr, ddth = qf._build_regular_map(rho, theta, curv, radius, a_mn=a_mn, b_mn=b_mn,
-                                                      inc_deriv=True)
-
-        grad = np.gradient(zpv)
-        gx = grad[0] / (rho[1] - rho[0])
-        gth = grad[1] / (theta[1] - theta[0])
-
-        err_rad = ddr - gx
-        rad_lim = np.nanmax(err_rad[1:-1,1:-1]) - np.nanmin(err_rad[1:-1,1:-1])
-        err_theta = ddth - gth
-        th_lim = np.nanmax(err_theta[1:-1,1:-1]) - np.nanmin(err_theta[1:-1,1:-1])
-
-        display_map(err_rad[1:-1,1:-1])
-        display_map(err_theta[1:-1,1:-1])
-        pass
 
     def test_xy_gradient(zmap, dfdx, dfdy, x, y):
         grad = np.gradient(zmap)
@@ -144,16 +107,6 @@ def test_synthmap(as_map=False, inverse=False):
         grad_err = test_xy_gradient(zinv, dfdx, dfdy, x, y)
         cond = zinv != 0.0
         diff = np.extract(cond, zmap - zinv)
-        if False:
-            yv = y.copy()
-            xv = np.zeros_like(yv)
-            zv, dxv, dyv = qfit.build_profile(xv, yv, a_nm, b_nm, centre=(0.0,0.0), inc_deriv=True)
-            plt.plot(yv, zv)
-            plt.show()
-            plt.plot(yv, dxv)
-            plt.show()
-            plt.plot(yv, dyv)
-            plt.show()
         inv_err = max(math.fabs(np.nanmax(diff)), math.fabs(np.nanmin(diff)))
 
     assert errors == 0 and inv_err < 1.0e-7 and grad_err < 1.0e-5

@@ -753,7 +753,7 @@ class QSpectrum(object):
     def _build_cartesian_gradient(self, dfdr, dfdth, rho_xy, theta_xy, curv, radius, a_mn, b_mn):
 
         """
-        df/dx = cos(theta)df/dr − (1/r)sin(theta)df/dth
+        dfdx  = cos(theta)df/dr - (1/r)sin(theta)df/dth
         df/dy = sin(theta)df/dr + (1/r)cos(theta)df/dth
 
         Need to handle division by zero
@@ -776,12 +776,11 @@ class QSpectrum(object):
 
     def build_profile(self, xv, yv, a_nm, b_nm, curv=None, radius=None, centre=None, extend=1.0, inc_deriv=False):
         """
-        Returns the nominal sag and optional derivatives along the vector or x, y coordinates. This routine
-        is suited to 1-D slices as it evaluates the sag and derivatives directly.
+        Returns the nominal sag and optional x and y derivatives along a 1D trajectory of (x, y) coordinates.
 
         Parameters:
-            x, y:   array_like
-                    Arrays of values representing the coordinate arrays x, y.
+            x, y:   arrays
+                    Arrays of values representing the (x, y) coordinates.
             a_nm, b_nm: 2D array
                     The cosine and sine terms for the Q freeform polynominal
             curv:   float
@@ -834,12 +833,11 @@ class QSpectrum(object):
 
     def build_map(self, x, y, a_nm, b_nm, curv=None, radius=None, centre=None, extend=1.0, interpolated=True, inc_deriv=False):
         """
-        Creates the spline interpolator for the map, determines the best fit sphere
-        and minimum valid radius.
+        Creates a 2D topography map and optional x and y derivate maps using the x and y axis vectors and the Q-freeform parameters.
 
         Parameters:
-            x, y:   array_like
-                    The interpolator uses grid points defined by the coordinate arrays x, y.
+            x, y:   array
+                    X, and Y axis values for the map to be created.
                     The arrays must be sorted to increasing order.
             a_nm, b_nm: 2D array
                     The cosine and sine terms for the Q freeform polynominal
@@ -847,7 +845,6 @@ class QSpectrum(object):
                     Nominal curvature for the part. If None uses the estimated value from the previous fit.
             radius: float
                     Defines the circular domain from the centre. If None uses the estimated value from the previous fit.
-
             centre: (cx, cy)
                     The centre of the part in axis coordinates. If None uses the estimated value from previous fit.
             extend: float
@@ -855,7 +852,8 @@ class QSpectrum(object):
             interpolated: boolean
                     If True uses a high resolution regular polar grid to build the underlying
                     data and a spline interpolation to extract the (x, y) grid, otherwise it evaluates
-                    each (x, y) point exactly. The non-interpolated solution is 100 times slower.
+                    each (x, y) point exactly. The non-interpolated solution is significanatly slower and
+                    only practical for smaller array sizes.
             inc_deriv: boolean
                     Return the X and Y derivatives as additional maps
         Returns:
@@ -926,8 +924,8 @@ class QSpectrum(object):
         and minimum valid radius.
 
         Parameters:
-            x, y:   array_like
-                    The interpolator uses grid points defined by the coordinate arrays x, y. 
+            x, y:   arrays
+                    The arrays are the X and Y axis values for the data map.
                     The arrays must be sorted to increasing order.
             zmap:   array_like
                     2-D array of data with shape (x.size,y.size).
@@ -984,7 +982,8 @@ class QSpectrum(object):
         A vectorized polar sag function that takes rho and theta as arguments.
 
         This function is used to pass an analytic sag function to test the performance
-        of the algorithm to a higher precision.
+        of the algorithm to a higher precision but can also be used to define the input map
+        and bypass data_map().
 
         """
         self.polar_sag_fn = sag_fn
@@ -999,8 +998,8 @@ class QSpectrum(object):
 
     def q_fit(self, m_max=None, n_max=None):
         """
-        Fits the departure from a best fit sphere to the Q-polynominals as defined
-        in [1](1.1)
+        Fits the departure from a best fit sphere to the Q-freeform polynominals as defined
+        in [1](1.1) and returns the individual sine and cosine terms.
 
         Parameters:
             m_max, n_max:  int
@@ -1008,7 +1007,7 @@ class QSpectrum(object):
                     and if not defined it matches the values to the pixel resolution. The maximum
                     resolution supported is (1500, 1500)
         Returns:
-            a, b:   2D array
+            a_nm, b_nm:   2D array
                     The (n,m) matrix representation of the cosine and sine terms
         """
         if self.interpolate is None and self.polar_sag_fn is None:
@@ -1039,7 +1038,7 @@ class QSpectrum(object):
     def build_q_spectrum(self, m_max=None, n_max=None):
         """
         Fits the departure from a best fit sphere to the Q-polynominals as defined
-        in [1](1.1)
+        in [1](1.1) and returns the root sum square of the azimuthal terms.
 
         Parameters:
             m_max, n_max:  int
@@ -1053,6 +1052,14 @@ class QSpectrum(object):
         q_spec = np.sqrt(np.square(a_mn) + np.square(b_mn))
         return q_spec
 
+    def bfs_param(self):
+        """
+        Returns the fitted radius, curvature and centre.
+
+        Returns:
+            radius, curvature, centre:  float, float, (x,y) tuple
+        """
+        return self.radius, self.bfs_curv, self.centre
 
 def qspec(x, y, zmap, m_max=None, n_max=None, centre=None, radius=None, shrink_pixels=7):
     """
