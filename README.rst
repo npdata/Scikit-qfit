@@ -67,11 +67,11 @@ Dependencies
 The package requires numpy and scipy and was tested on Linux with:
 
  * Python 2.7.6
- * numpy 1.8.2
- * scipy 0.13.3
+ * numpy 1.14.5
+ * scipy 1.0.0
 
-These python, numpy and scipy versions were available on the Ubuntu 14.04 Linux release at the time of testing.
-The package has been informally tested with python 3.4 successfully and I am not aware of reason it should not work with
+These python, numpy and scipy versions were available on the Ubuntu 18.04 Linux release at the time of testing.
+The package has been informally tested with python 3.6 successfully and I am not aware of reason it should not work with
 later releases of these packages.
 
 Acknowledge

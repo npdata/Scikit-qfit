@@ -14,7 +14,7 @@ from setuptools import setup
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if not on_rtd:
-    install_requires = ['numpy >= 1.8.2', 'scipy >= 0.13.3']
+    install_requires = ['numpy >= 1.8.2', 'scipy >= 1.0.0']
     tests_require = ['pytest_cov', 'pytest']
 else:
     install_requires = []

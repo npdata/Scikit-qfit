@@ -2,6 +2,10 @@
 Changelog
 =========
 
+Version 0.1.5
+=============
+- Fix factorial, factorial2 scipy import
+
 Version 0.1.4
 =============
 - Adds spectrum to topography functionality

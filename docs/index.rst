@@ -123,8 +123,8 @@ Installation Dependencies
 installed:
 
 * `Python <http://www.python.org>`_ 2.7.6 or later.
-* `NumPy <http://www.numpy.org>`_ 1.8.2 or later.
-* `SciPy <http://www.scipy.org>`_ 0.13.3 or later.
+* `NumPy <http://www.numpy.org>`_ 1.14.5 or later.
+* `SciPy <http://www.scipy.org>`_ 1.0.0 or later.
 
 
 Contents

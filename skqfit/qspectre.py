@@ -13,7 +13,7 @@ import numpy as np
 
 from scipy import interpolate
 
-from scipy.misc import factorial, factorial2
+from scipy.special import factorial, factorial2
 from scipy import ndimage
 
 from skqfit.asmjacp import AsymJacobiP
