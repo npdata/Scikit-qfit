@@ -136,7 +136,7 @@ Contents
    Module Reference <modules>
    License <license>
    Authors <authors>
-   Changelog <changes>
+   Changelog <changelog>
 
 
 

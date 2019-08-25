@@ -8,13 +8,17 @@ in Section 5 of the "Fitting freeform shapes with orthogonal bases" document.
 
 from __future__ import print_function, absolute_import, division
 
+__author__ = "npdata"
+__copyright__ = "npdata"
+__license__ = "mit"
+
 import math
 import time
 import numpy as np
 from numpy.polynomial.polynomial import polyval2d
 from skqfit.qspectre import QSpectrum
 
-def test_synthmap(as_map=False, inverse=True):
+def eval_synthmap(as_map=False, inverse=True):
     def sag_fn(rhov, thetav):
         x = rhov*np.cos(thetav)
         y = rhov*np.sin(thetav)
@@ -111,6 +115,13 @@ def test_synthmap(as_map=False, inverse=True):
 
     assert errors == 0 and inv_err < 1.0e-7 and grad_err < 1.0e-5
 
+def test_as_map():
+    eval_synthmap(as_map=True, inverse=True)
+    
+def test_as_sagfn():
+    eval_synthmap(as_map=False, inverse=True)
+    
 if __name__ == "__main__":
-    test_synthmap(as_map=False, inverse=True)
-    test_synthmap(as_map=True, inverse=True)
+    test_as_sagfn()
+    test_as_map()
+

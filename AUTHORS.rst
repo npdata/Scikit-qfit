@@ -1,5 +1,5 @@
-==========
-Developers
-==========
+============
+Contributors
+============
 
 * npdata <npdata@bigpond.com>

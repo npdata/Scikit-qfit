@@ -83,5 +83,6 @@ Acknowledge
 Note
 ====
 
-This project has been set up using PyScaffold 2.4.4. For details and usage
-information on PyScaffold see http://pyscaffold.readthedocs.org/.
+
+This project has been set up using PyScaffold 3.2.1. For details and usage
+information on PyScaffold see https://pyscaffold.org/.

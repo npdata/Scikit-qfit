@@ -30,4 +30,3 @@ Version 0.1
 ===========
 
 - Initial public pre-alpha release
-
